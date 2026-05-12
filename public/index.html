@@ -1,0 +1,129 @@
+<html>
+
+<head>
+  <title>肥宅快樂水 - 歷年價格查詢</title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <style>
+    body { font-family: sans-serif; margin: 20px; }
+    .search-box { margin: 20px 0; padding: 10px; background: #f4f4f4; border-radius: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { padding: 8px; text-align: left; }
+    form div { margin-bottom: 10px; }
+  </style>
+</head>
+
+<body>
+  <h1>🥤 肥宅快樂水：可樂歷年價格查詢系統</h1>
+  <p>追蹤那些年我們一起喝的快樂水價格變化。</p>
+
+  <hr>
+  <h2>📥 新增價格資料</h2>
+  <form id="colaForm">
+    <div>
+      <label for="date">日期 (年分):</label>
+      <input type="text" id="date" name="date" placeholder="例如: 2024" required>
+    </div>
+    <div>
+      <label for="product_name">商品名稱:</label>
+      <input type="text" id="product_name" name="product_name" placeholder="例如: 600ml可樂" required>
+    </div>
+    <div>
+      <label for="price">商品價格 (NT$):</label>
+      <input type="number" id="price" name="price" step="0.1" required>
+    </div>
+    <button type="submit">確認新增</button>
+  </form>
+
+  <p id="responseMessage" style="color: blue;"></p>
+
+  <hr>
+  <div class="search-box">
+    <h2>🔍 簡易查詢</h2>
+    <label for="searchInput">輸入關鍵字過濾 (年分或名稱):</label>
+    <input type="text" id="searchInput" placeholder="搜尋..." onkeyup="filterTable()">
+  </div>
+
+  <h2>📊 價格變化一覽表</h2>
+  <table border="1" id="colaTable">
+    <thead>
+      <tr>
+        <th>日期 (年分)</th>
+        <th>商品名稱</th>
+        <th>商品價格 (元)</th>
+      </tr>
+    </thead>
+    <tbody id="colaTableBody">
+      <!-- 資料將插入於此 -->
+    </tbody>
+  </table>
+
+  <script>
+    let allData = []; // 儲存所有資料以便過濾
+
+    // 取得所有可樂價格
+    async function fetchColaPrices() {
+      try {
+        const response = await fetch('/api/quotes');
+        allData = await response.json();
+        renderTable(allData);
+      } catch (err) {
+        console.error('載入資料失敗:', err);
+      }
+    }
+
+    // 渲染表格
+    function renderTable(data) {
+      const tbody = document.getElementById('colaTableBody');
+      tbody.innerHTML = '';
+      data.forEach(item => {
+        const row = `<tr>
+          <td>${item.date}</td>
+          <td>${item.product_name}</td>
+          <td>${item.price} 元</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    // 過濾功能
+    function filterTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtered = allData.filter(item => 
+        item.date.toString().toLowerCase().includes(query) || 
+        item.product_name.toLowerCase().includes(query)
+      );
+      renderTable(filtered);
+    }
+
+    // 初始載入
+    fetchColaPrices();
+
+    document.getElementById('colaForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const date = document.getElementById('date').value;
+      const product_name = document.getElementById('product_name').value;
+      const price = document.getElementById('price').value;
+      const responseMessage = document.getElementById('responseMessage');
+
+      const params = new URLSearchParams({ date, product_name, price });
+
+      try {
+        const response = await fetch(`/api/insert?${params.toString()}`);
+        const data = await response.json();
+        
+        if (response.ok) {
+          responseMessage.innerText = `✅ ${data.message}`;
+          fetchColaPrices(); // 重新載入並更新 allData
+          document.getElementById('colaForm').reset();
+        } else {
+          responseMessage.innerText = `❌ 錯誤: ${data.error}`;
+        }
+      } catch (err) {
+        responseMessage.innerText = `⚠️ 發生錯誤: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+
+</html>
